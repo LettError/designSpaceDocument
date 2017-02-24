@@ -126,7 +126,7 @@ doc.addInstance(i2)
 # `AxisDescriptor` object
 * `tag`: string. Four letter tag for this axis. Some might be registered at the OpenType specification.
 * `name`: string. Name of the axis as it is used in the location dicts. MutatorMath + Varlib.
-* `labelNames`: dict. When defining a non-registered axis, it will be necessary to define user-facing readable names for the axis. Keyed by xml:lang code. Varlib. 
+* `labelnames`: dict. When defining a non-registered axis, it will be necessary to define user-facing readable names for the axis. Keyed by xml:lang code. Varlib. 
 * `minimum`: number. The minimum value for this axis. MutatorMath + Varlib.
 * `maximum`: number. The maximum value for this axis. MutatorMath + Varlib.
 * `default`: number. The default value for this axis, i.e. when a new location is created, this is the value this axis will get. MutatorMath + Varlib.
@@ -139,8 +139,8 @@ a1.maximum = 1000
 a1.default = 0
 a1.name = "weight"
 a1.tag = "wght"
-a1.labelNames[u'fa-IR'] = u"قطر"
-a1.labelNames[u'en'] = u"Wéíght"
+a1.labelnames[u'fa-IR'] = u"قطر"
+a1.labelnames[u'en'] = u"Wéíght"
 a1.map = [(0.0, 10.0), (401.0, 66.0), (1000.0, 990.0)]
 ```
 # `RuleDescriptor` object
@@ -227,8 +227,8 @@ myDoc = DesignSpaceDocument(KeyedDocReader, KeyedDocWriter)
 
 ### Example
 ```xml
-<labelName xml:lang="fa-IR">قطر</labelName>
-<labelName xml:lang="en">Wéíght</labelName>
+<labelname xml:lang="fa-IR">قطر</labelname>
+<labelname xml:lang="en">Wéíght</labelname>
 ```
 
 # 1.2 `map` element
@@ -247,8 +247,8 @@ myDoc = DesignSpaceDocument(KeyedDocReader, KeyedDocWriter)
 ```xml
     <axes>
         <axis default="0" maximum="1000" minimum="0" name="weight" tag="wght">
-            <labelName xml:lang="fa-IR">قطر</labelName>
-            <labelName xml:lang="en">Wéíght</labelName>
+            <labelname xml:lang="fa-IR">قطر</labelname>
+            <labelname xml:lang="en">Wéíght</labelname>
         </axis>
         <axis default="0" maximum="1000" minimum="0" name="width" tag="wdth">
             <map input="0.0" output="10.0" />
