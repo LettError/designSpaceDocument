@@ -228,6 +228,10 @@ class DesignSpaceProcessor(DesignSpaceDocument):
     mathGlyphClass = MathGlyph
     mathKerningClass = MathKerning
 
+    braceLayerNamePattern = u"#brace "
+    braceLocationLibKey = "designspace.location"
+
+
     def __init__(self, readerClass=None, writerClass=None, fontClass=None, ufoVersion=3):
         super(DesignSpaceProcessor, self).__init__(readerClass=readerClass, writerClass=writerClass, fontClass=fontClass)
         self.ufoVersion = ufoVersion         # target UFO version
@@ -291,14 +295,44 @@ class DesignSpaceProcessor(DesignSpaceDocument):
         bias, self._kerningMutator = buildMutator(kerningItems, axes=self._preppedAxes, bias=self.defaultLoc)
         return self._kerningMutator
 
-    def getGlyphMutator(self, glyphName, decomposeComponents=False):
+    def _collectBraceGlyphs(self, glyphName):
+        """ See if the default font has brace layers, 
+            collect the glyphs and their locations.
+            The layer API is rather different between fontparts and defcon. 
+            Just suck it up and make it work here. 
+        """
+        braces = []
+        defaultFont = self.getNeutralFont()
+        glyph = defaultFont[glyphName]
+        if hasattr(glyph, "layers"):
+            # fontParts
+            for layerGlyph in glyph.layers:
+                #print("from fontparts", layerGlyph, layerGlyph.layer.name, layerGlyph.lib.get(self.braceLocationLibKey))
+                locFromLib = layerGlyph.lib.get(self.braceLocationLibKey)
+                if locFromLib is not None:
+                    braces.append((locFromLib, layerGlyph))
+        elif hasattr(defaultFont, "layers"):
+            # defcon
+            if hasattr(defaultFont.layers, "layerOrder"):
+                for layerName in defaultFont.layers.layerOrder:
+                    layer = defaultFont.layers[layerName]
+                    if glyphName in layer:
+                        layerGlyph = layer[glyphName]
+                    #print("from defcon", layerGlyph, layerGlyph.name, layerGlyph.lib.get(self.braceLocationLibKey))
+                    locFromLib = layerGlyph.lib.get(self.braceLocationLibKey)
+                    if locFromLib is not None:
+                        braces.append((locFromLib, layerGlyph))
+        return braces
+
+    def getGlyphMutator(self, glyphName, decomposeComponents=False, includeBraces=True):
         """ Return a glyph mutator.defaultLoc
             decomposeComponents = True causes the source glyphs to be decomposed first
             before building the mutator. That gives you instances that do not depend
             on a complete font. If you're calculating previews for instance.
         """
-        if glyphName in self._glyphMutators:
-            return self._glyphMutators[glyphName]
+        cacheKey = (glyphName, decomposeComponents, includeBraces)
+        if cacheKey in self._glyphMutators:
+            return self._glyphMutators[cacheKey]
         items = []
         for sourceDescriptor in self.sources:
             loc = Location(sourceDescriptor.location)
@@ -321,9 +355,26 @@ class DesignSpaceProcessor(DesignSpaceDocument):
             else:
                 processThis = sourceGlyphObject
             items.append((loc, self.mathGlyphClass(processThis)))
-        bias, self._glyphMutators[glyphName] = buildMutator(items, axes=self._preppedAxes, bias=self.defaultLoc)
-        return self._glyphMutators[glyphName]
+        if includeBraces:
+            braces = self._collectBraceGlyphs(glyphName)
+            if braces and not glyphName in sourceDescriptor.mutedGlyphNames:
+                for locDict, braceGlyph in braces:
+                    loc = Location(locDict)
+                    # do we need decomposition here?
+                    print("adding brace", loc, braceGlyph)
+                    items.append((loc, self.mathGlyphClass(braceGlyph)))
+        bias, self._glyphMutators[cacheKey] = buildMutator(items, axes=self._preppedAxes, bias=self.defaultLoc)
+        return self._glyphMutators[cacheKey]
 
+    def getNeutralFont(self):
+        # Return a font object for the neutral font
+        # self.fonts[self.default.name] ?
+        neutralLoc = self.newDefaultLocation()
+        for sd in self.sources:
+            if sd.location == neutralLoc:
+                if sd.name in self.fonts:
+                    return self.fonts[sd.name]
+        return None
 
     def loadFonts(self, reload=False):
         # Load the fonts and find the default candidate based on the info flag
@@ -498,17 +549,21 @@ class DesignSpaceProcessor(DesignSpaceDocument):
 
     def _instantiateFont(self, path):
         """ Return a instance of a font object with all the given subclasses"""
-        return self.fontClass(path,
-            libClass=self.libClass,
-            kerningClass=self.kerningClass,
-            groupsClass=self.groupsClass,
-            infoClass=self.infoClass,
-            featuresClass=self.featuresClass,
-            glyphClass=self.glyphClass,
-            glyphContourClass=self.glyphContourClass,
-            glyphPointClass=self.glyphPointClass,
-            glyphComponentClass=self.glyphComponentClass,
-            glyphAnchorClass=self.glyphAnchorClass)
+        try:
+            return self.fontClass(path,
+                libClass=self.libClass,
+                kerningClass=self.kerningClass,
+                groupsClass=self.groupsClass,
+                infoClass=self.infoClass,
+                featuresClass=self.featuresClass,
+                glyphClass=self.glyphClass,
+                glyphContourClass=self.glyphContourClass,
+                glyphPointClass=self.glyphPointClass,
+                glyphComponentClass=self.glyphComponentClass,
+                glyphAnchorClass=self.glyphAnchorClass)
+        except TypeError:
+            # if our fontClass doesnt support all the additional classes
+            return self.fontClass(path)
 
     def _copyFontInfo(self, sourceInfo, targetInfo):
         """ Copy the non-calculating fields from the source info."""
