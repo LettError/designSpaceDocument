@@ -312,7 +312,6 @@ class DesignSpaceProcessor(DesignSpaceDocument):
                 #print("from fontparts", layerGlyph, layerGlyph.layer.name, layerGlyph.lib.get(self.braceLocationLibKey))
                 locFromLib = layerGlyph.lib.get(self.braceLocationLibKey)
                 if locFromLib is not None:
-                    braces.append((locFromLib, layerGlyph))
                     sourceInfo = dict(source=defaultFont.path, glyphName=glyphName, layerName=layerGlyph.layer.name, location=locFromLib, sourceName=self.default.name)
                     braces.append((locFromLib, layerGlyph, sourceInfo))
         elif hasattr(defaultFont, "layers"):
@@ -326,13 +325,17 @@ class DesignSpaceProcessor(DesignSpaceDocument):
                     locFromLib = layerGlyph.lib.get(self.braceLocationLibKey)
                     if locFromLib is not None:
                         # collect the source info here so an editor can find the right source to open
-                        sourceInfo = dict(source=defaultFont.path, glyphName=glyphName, layerName=layerName, location=locFromLib, sourceName=self.default.name)
+                        if self.default is not None:
+                            name = self.default.name
+                        else:
+                            name = "xxxxxx"
+                        sourceInfo = dict(source=defaultFont.path, glyphName=glyphName, layerName=layerName, location=locFromLib, sourceName=name)
                         braces.append((locFromLib, layerGlyph, sourceInfo))
         return braces
 
-    def getGlyphMutator(self, glyphName, decomposeComponents=False, includeBraces=True):
+    def getGlyphMutator(self, glyphName, decomposeComponents=False, includeBraces=True, fromCache=True):
         cacheKey = (glyphName, decomposeComponents, includeBraces)
-        if cacheKey in self._glyphMutators:
+        if cacheKey in self._glyphMutators and fromCache:
             return self._glyphMutators[cacheKey]
         items = self.collectMastersForGlyph(glyphName, decomposeComponents=decomposeComponents, includeBraces=includeBraces)
         items = [(a,self.mathGlyphClass(b)) for a, b, c in items]
@@ -373,6 +376,7 @@ class DesignSpaceProcessor(DesignSpaceDocument):
         if includeBraces:
             braces = self._collectBraceGlyphs(glyphName)
             if braces and not glyphName in sourceDescriptor.mutedGlyphNames:
+                #print("xxxx braces", braces)
                 for locDict, braceGlyph, sourceInfo in braces:
                     loc = Location(locDict)
                     # do we need decomposition here?
