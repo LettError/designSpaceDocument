@@ -1,3 +1,10 @@
+DesignSpaceDocument is moving to fontTools
+==========================================
+
+This package will be absorbed into fontTools.
+
+
+
 MutatorMath started out with its own reader and writer for designspaces. Since then the use of designspace has broadened and it would be useful to have a reader and writer that are independent of a specific system.
 
 DesignSpaceDocument
