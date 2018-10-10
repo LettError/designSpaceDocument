@@ -279,17 +279,18 @@ class DesignSpaceProcessor(DesignSpaceDocument):
         return self._infoMutator
 
     def getKerningMutator(self):
-        """ Return a kerning mutator """
-        if self._kerningMutator:
+            """ Return a kerning mutator """
+            if self._kerningMutator:
+                return self._kerningMutator
+            kerningItems = []
+            for sourceDescriptor in self.sources:
+                if not sourceDescriptor.muteKerning:
+                    loc = Location(sourceDescriptor.location)
+                    sourceFont = self.fonts[sourceDescriptor.name]
+                    # this makes assumptions about the groups of all sources being the same. 
+                    kerningItems.append((loc, self.mathKerningClass(sourceFont.kerning, sourceFont.groups)))
+            bias, self._kerningMutator = buildMutator(kerningItems, axes=self._preppedAxes, bias=self.defaultLoc)
             return self._kerningMutator
-        kerningItems = []
-        for sourceDescriptor in self.sources:
-            loc = Location(sourceDescriptor.location)
-            sourceFont = self.fonts[sourceDescriptor.name]
-            # this makes assumptions about the groups of all sources being the same. 
-            kerningItems.append((loc, self.mathKerningClass(sourceFont.kerning, sourceFont.groups)))
-        bias, self._kerningMutator = buildMutator(kerningItems, axes=self._preppedAxes, bias=self.defaultLoc)
-        return self._kerningMutator
 
     def getGlyphMutator(self, glyphName, decomposeComponents=False):
         """ Return a glyph mutator.defaultLoc
